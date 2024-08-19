@@ -145,7 +145,7 @@ def compare_search_algorithms(
             for alg in algorithms:
                 if computed_results[trace][alg]:
                     results[alg]['cost'].append(computed_results[trace][alg]['cost'])
-                    results[alg]['time'].append(time_limit)  # Store the time limit as the time taken
+                    results[alg]['time'].append(computed_results[trace][alg]['time'])  
                     results[alg]['nodes_popped'].append(computed_results[trace][alg]['nodes_popped'])
                 else:
                     results[alg]['cost'].append(None)
@@ -518,17 +518,21 @@ def run_algorithm_with_timeout(sync_prod, algorithm: str, timeout: Optional[int]
     """
     Runs a specified search algorithm on the provided sync product with a timeout.
     Handles exceptions and returns None if the algorithm fails or times out.
+    Includes the computation time in the results.
     """
     result = {}
     
     def target():
         try:
+            start_time = time.time()  # Start the timer
             if algorithm == 'astar':
                 result['alignment'], result['cost'], result['nodes_popped'] = sync_prod.astar_search()
             elif algorithm == 'astar_extended':
                 result['alignment'], result['cost'], result['nodes_popped'] = sync_prod.astar_incremental()
             elif algorithm == 'reach':
                 result['alignment'], result['cost'], result['nodes_popped'] = sync_prod.reach_search()
+            end_time = time.time()  # End the timer
+            result['time'] = end_time - start_time  # Calculate the elapsed time
         except Exception as e:
             result['error'] = e
     
@@ -537,14 +541,18 @@ def run_algorithm_with_timeout(sync_prod, algorithm: str, timeout: Optional[int]
     thread.join(timeout=timeout)
     
     if thread.is_alive():
-        print(f" Timeout occurred for {algorithm}.")
+        print(f"Timeout occurred for {algorithm}.")
         return None
     
     if 'error' in result:
         print(f"Error occurred for {algorithm}: {result['error']}")
         return None
     
-    return {'cost': result.get('cost'), 'nodes_popped': result.get('nodes_popped')}
+    return {
+        'cost': result.get('cost'),
+        'nodes_popped': result.get('nodes_popped'),
+        'time': result.get('time')
+    }
 
 
 def process_pickle_file(pickle_file_path):
